@@ -64,6 +64,8 @@ class Aria2Evil {
    */
   #ctx
 
+  #urlCache = new Set
+
   async init() {
     const isNext = await this.check()
     if (!isNext) {
@@ -105,11 +107,16 @@ class Aria2Evil {
   async start() {
     // https://github.com/sonnyp/aria2.js
     // aria2c --enable-rpc --rpc-listen-all=true --rpc-allow-origin-all
+    // fixme cert link https://github.com/aria2/aria2/issues/889
     console.log('start aria2 server', new Date)
     const exec = isWin ? this.execPath : this.execName
     console.log('current exec path is', exec)
-    const { stdout } = await execa(exec, ['--enable-rpc', '--rpc-listen-all=true', '--rpc-allow-origin-all'])
+    const { stdout } = await execa(exec, [ '--check-certificate=false', '--enable-rpc', '--rpc-listen-all=true', '--rpc-allow-origin-all'])
     console.log(stdout)
+  }
+
+  #getID(raw) {
+    // TODO: impl this 
   }
 
   /**
@@ -118,6 +125,12 @@ class Aria2Evil {
    */
   download(url) {
     console.log('download task add url is {}'.format(url))
+    if (this.#urlCache.has(url)) {
+      console.log("current task has exist")
+      return
+    }
+    console.log('download task start {}'.format(url))
+    this.#urlCache.add(url)
     this.#ctx.call('addUri', [url], {
       dir: wxDownloadDir,
     })
@@ -149,6 +162,12 @@ router.post('/api', ctx=> {
   console.log('/api request url is {}, start download'.format(url))
   evil.download(url)
   ctx.body = url
+})
+
+router.get('/api', ctx=> {
+  const msg = '/api GET method demo response' + (new Date).toString()
+  console.log(msg)
+  ctx.body = msg
 })
 
 app.use(koaBody())
