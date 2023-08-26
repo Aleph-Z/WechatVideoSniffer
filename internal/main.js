@@ -1,17 +1,31 @@
-const Koa = require('koa')
-const Router = require('@koa/router')
-const Cowsay = require('cowsay')
-const execa = require('execa')
-const os = require('os')
-const path = require('path')
-const fs = require('fs')
-const cport = require('detect-port')
-const aria2 = require('aria2')
-const app = new Koa()
+import Koa from 'koa'
+import Router from '@koa/router'
+import Cowsay from 'cowsay'
+import os from 'os'
+import path from 'path'
+import fs from 'fs'
+import cport from 'detect-port'
+import aria2 from 'aria2'
+import { execa, execaCommandSync } from 'execa'
+import { dirname } from 'path'
+import { fileURLToPath } from 'url'
 
+const app = new Koa()
 const router = new Router()
 
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
 const isWin = os.platform == 'win32'
+
+function isCommandExists(command) {
+  try {
+    execaCommandSync(`command -v ${command}`);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
 
 // ok. fine, I'm like python {} format
 // https://stackoverflow.com/a/4974690
@@ -34,8 +48,10 @@ class Aria2Evil {
     const isNext = await this.check()
     if (isNext) {
       console.log('aria2-server 启动成功')
-      await this.start()
-      this.#ctx = new aria2()
+      this.start()
+      setTimeout(()=> {
+        this.#ctx = new aria2()
+      }, 1200)
     } else {
       console.log('aria2-server 启动失败')
     }
@@ -54,8 +70,9 @@ class Aria2Evil {
     // https://github.com/sonnyp/aria2.js
     // aria2c --enable-rpc --rpc-listen-all=true --rpc-allow-origin-all
     console.log('start aria2 server', new Date)
-    console.log('current exec path is', this.execPath)
-    const { stdout } = await execa(execName, ['--enable-rpc', '--rpc-listen-all=true', '--rpc-allow-origin-all'])
+    const exec = isWin ? this.execPath : this.execName
+    console.log('current exec path is', exec)
+    const { stdout } = await execa(exec, ['--enable-rpc', '--rpc-listen-all=true', '--rpc-allow-origin-all'])
     console.log(stdout)
   }
 
@@ -68,13 +85,14 @@ class Aria2Evil {
   }
 
   async check() {
+    const isNext = isCommandExists(this.execName)
     // 1. 检测 aria2 二进制是否存在
-    if (!fs.existsSync(this.execPath)) {
+    if (!fs.existsSync(this.execPath) && !isNext) {
       return false 
     }
     // 2. 检测端口是否被占用
     const isOpen = await cport(this.#port)
-    return !isOpen
+    return isOpen == this.#port
   }
 
 }
