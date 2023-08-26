@@ -9,6 +9,7 @@ import aria2 from 'aria2'
 import { execa, execaCommandSync } from 'execa'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
+import { koaBody } from 'koa-body'
 
 const app = new Koa()
 const router = new Router()
@@ -17,6 +18,23 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 const isWin = os.platform == 'win32'
+
+// copy by ChatGPT
+function getDownloadDir() {
+  const homedir = os.homedir()
+  let downloadDir
+  if (process.platform === 'win32') {
+    downloadDir = path.join(homedir, 'Downloads')
+  } else if (process.platform === 'darwin') {
+    downloadDir = path.join(homedir, 'Downloads')
+  } else {
+    downloadDir = path.join(homedir, 'Downloads')
+  }
+  return downloadDir
+}
+
+const downloadDir = getDownloadDir()
+const wxDownloadDir = path.join(downloadDir, 'wx')
 
 function isCommandExists(command) {
   try {
@@ -81,7 +99,9 @@ class Aria2Evil {
    * @param {string} url 
    */
   download(url) {
-    this.#ctx.call('addUri', [url], {})
+    this.#ctx.call('addUri', [url], {
+      dir: wxDownloadDir,
+    })
   }
 
   async check() {
@@ -96,10 +116,21 @@ class Aria2Evil {
   }
 
 }
+
+const evil = new Aria2Evil()
+
 router.get('/ping', _=> {
   const msg = 'pong! current time is: {}'.format((new Date).toString())
   _.body = msg
 })
+
+router.post('/api', ctx=> {
+  const { url } = ctx.request.body
+  evil.download(url)
+  ctx.body = url
+})
+
+app.use(koaBody())
 
 app.use(router.routes())
 
@@ -112,8 +143,12 @@ function serverCallback() {
   console.log(msg)
 }
 
-const evil = new Aria2Evil()
 ;(async ()=> {
+  execa('mkdir', [
+    '-p',
+    wxDownloadDir,
+  ])
+  console.log('尝试创建下载目录($HOME/Downloads/wx)')
   await evil.init()
   app.listen(3000, serverCallback)
 })()
