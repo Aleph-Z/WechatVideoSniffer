@@ -11,6 +11,7 @@ import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { koaBody } from 'koa-body'
 import { mkdirpSync } from 'mkdirp'
+import downloader from 'nodejs-file-downloader'
 
 const app = new Koa()
 const router = new Router()
@@ -65,15 +66,31 @@ class Aria2Evil {
 
   async init() {
     const isNext = await this.check()
-    if (isNext) {
-      console.log('aria2-server 启动成功')
-      this.start()
-      setTimeout(()=> {
-        this.#ctx = new aria2()
-      }, 1200)
-    } else {
-      console.log('aria2-server 启动失败')
+    if (!isNext) {
+      if (isWin) {
+        console.log('windows系统自动下载aria2.exe')
+        await this.downloadBin()
+      } else {
+        console.log('其他系统不支持')
+        process.exit(1)
+      }
     }
+    console.log('aria2-server 启动成功')
+    this.start()
+    setTimeout(()=> {
+      this.#ctx = new aria2()
+    }, 1200)
+  }
+
+  async downloadBin() {
+    // https://github.com/agalwood/Motrix/blob/7012040fec926e16fe8f6c403cf038527f5c18b9/extra/win32/x64/engine/aria2c.exe
+    const url = "https://ghproxy.com/https://github.com/agalwood/Motrix/raw/7012040fec926e16fe8f6c403cf038527f5c18b9/extra/win32/x64/engine/aria2c.exe"
+    const down = new downloader({
+      fileName: 'aria2c.exe',
+      url,
+      directory: path.normalize(__dirname),
+    })
+    await down.download()
   }
 
   get execName() {
