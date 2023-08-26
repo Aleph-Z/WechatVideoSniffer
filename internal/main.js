@@ -117,6 +117,7 @@ class Aria2Evil {
    * @param {string} url 
    */
   download(url) {
+    console.log('download task add url is {}'.format(url))
     this.#ctx.call('addUri', [url], {
       dir: wxDownloadDir,
     })
@@ -139,11 +140,13 @@ const evil = new Aria2Evil()
 
 router.get('/ping', _=> {
   const msg = 'pong! current time is: {}'.format((new Date).toString())
+  console.log(msg)
   _.body = msg
 })
 
 router.post('/api', ctx=> {
   const { url } = ctx.request.body
+  console.log('/api request url is {}, start download'.format(url))
   evil.download(url)
   ctx.body = url
 })
