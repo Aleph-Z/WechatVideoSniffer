@@ -10,6 +10,7 @@ import { execa, execaCommandSync } from 'execa'
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { koaBody } from 'koa-body'
+import { mkdirpSync } from 'mkdirp'
 
 const app = new Koa()
 const router = new Router()
@@ -144,10 +145,7 @@ function serverCallback() {
 }
 
 ;(async ()=> {
-  execa('mkdir', [
-    '-p',
-    wxDownloadDir,
-  ])
+  mkdirpSync(wxDownloadDir)
   console.log('尝试创建下载目录($HOME/Downloads/wx)')
   await evil.init()
   app.listen(3000, serverCallback)
