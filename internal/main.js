@@ -72,9 +72,46 @@ function getFilename(fullPath) {
   return fullPath.replace(/^.*[\\\/]/, '');
 }
 
+// https://stackoverflow.com/a/19811573
+function getRealFilename(filename) {
+  return path.basename(filename, path.extname(filename))
+}
+
+function getExtension(filename) {
+  var ext = path.extname(filename||'').split('.');
+  return ext[ext.length - 1];
+}
+
 // TODO: 将 flv 转为 ffmpeg
 class Convert {
-  
+
+  #ffmpeg = ""
+  #outputDir = ""
+
+  constructor(outputDir, bin) {
+    if (bin) {
+      this.#ffmpeg = bin
+    }
+    this.#outputDir = outputDir
+  }
+
+  // TODO: 下载 ffmpeg 二进制
+  downloadBin() {
+
+  }
+
+  async exec(raw) {
+    const filename = getFilename(raw)
+    const realFilename = getRealFilename(filename)
+    const outputFilename = path.join(this.#outputDir, realFilename)
+    // TODO: 将 stdout 打印到 process.stdout
+    const data = await execa(this.#ffmpeg, [
+      "-i",
+      raw,
+      outputFilename,
+    ])
+    return data
+  }
 }
 
 
