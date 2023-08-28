@@ -57,6 +57,62 @@ String.prototype.format = function () {
   })
 }
 
+// copy by https://gist.github.com/zentala/1e6f72438796d74531803cc3833c039c
+function formatBytes(bytes,decimals) {
+  if(bytes == 0) return '0 Bytes';
+  var k = 1024,
+      dm = decimals || 2,
+      sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+      i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+// https://bobbyhadz.com/blog/javascript-get-filename-without-path
+function getFilename(fullPath) {
+  return fullPath.replace(/^.*[\\\/]/, '');
+}
+
+// TODO: 将 flv 转为 ffmpeg
+class Convert {
+  
+}
+
+
+// 将下载好的文件同步到其他目录供百度云自动同步
+class FLVSync {
+  
+  #target = ""
+
+  #envKey = "NODE_SYNC"
+
+  constructor(target) {
+    if (target) {
+      this.#target = target
+    } else {
+      this.initAsEnv()
+    }
+  } 
+
+  // Windows 环境变量设置: setx NODE_SYNC D:\Downloads
+  initAsEnv() {
+    const _target = process.env[this.#envKey] || ""
+    this.#target = _target
+  }
+
+  exec(filename) {
+    const old = path.join(wxDownloadDir, filename)
+    const output = path.join(this.#target, filename)
+    const size = fs.statSync(old).size
+    const humanSize=  formatBytes(size)
+    const msg = '{} 准备同步到 {} 文件大小为 {}'.format(filename, this.#target, humanSize)
+    console.log(msg)
+    fs.copyFileSync(old, output)
+    const taskDoneMsg = '{} 同步结束({})'.format(filename, output)
+    console.log(taskDoneMsg)
+  }
+
+}
+
 class Aria2Evil {
 
   #port = 6800
@@ -69,6 +125,8 @@ class Aria2Evil {
 
   #aria2Bin = "aria2c.exe"
   #aria2Webui = 'aria2_page.cc'
+
+  flvSync = new FLVSync
 
   get currentWebUIFile() {
     return path.join(__dirname, this.#aria2Webui)
@@ -126,11 +184,12 @@ class Aria2Evil {
     setTimeout(async ()=> {
       this.#ctx = new aria2()
       await this.#ctx.open()
-      this.#ctx.on('onDownloadComplete', par=> {
-        // TODO: impl this
+      this.#ctx.on('onDownloadComplete', async par=> {
         console.log("文件下载完成", par) 
-      }).on('onDownloadError', par=> {
-        // TODO: impl this
+        const filename = await this.mustQueryTaskFilename(par)
+        this.flvSync.exec(filename)
+      }).on('onDownloadError', async par=> {
+        // FIXME: 或许 flv 这种推流格式会返回失败, 所以可能要跟上面逻辑一样为好.
         console.log('文件下载失败', par)
       })
     }, 1200)
@@ -173,7 +232,7 @@ class Aria2Evil {
     console.log('start aria2 server', new Date)
     const exec = isWin ? this.execPath : this.execName
     console.log('current exec path is', exec)
-    const { stdout } = await execa(exec, [ '--check-certificate=false', '--enable-rpc', '--rpc-listen-all=true', '--rpc-allow-origin-all'])
+    const { stdout } = await execa(exec, [ '--check-certificate=false', `--dir=${wxDownloadDir}`, '--enable-rpc', '--rpc-listen-all=true', '--rpc-allow-origin-all'])
     console.log(stdout)
   }
 
@@ -184,6 +243,23 @@ class Aria2Evil {
   #getID(raw) {
     const [ , id ] = raw.match(/trtc.*\/(.*)\.flv/) || []
     return id
+  }
+
+  // FIXME: 这里如果传递的 url 是重复的话, 文件名就会错误
+  // 已知 aria2 下载重复路径的文件名格式为: xx.1.$ext
+  async mustQueryTaskFilename(par) {
+    const gid = par[0].gid
+    const result = this.queryTaskFilename(gid)
+    return result
+  }
+
+  async queryTaskFilename(id, returnObj) {
+    const status = await this.#ctx.call("tellStatus", id)
+    if (returnObj) return status
+    // FIXME: must!!
+    const path = status.files[0].path
+    const result = getFilename(path)
+    return result
   }
 
   /**
@@ -201,7 +277,7 @@ class Aria2Evil {
     this.#urlCache.add(url)
     if (!!id) this.#urlCache.add(id)
     this.#ctx.call('addUri', [url], {
-      dir: wxDownloadDir,
+      // dir: wxDownloadDir,
     })
   }
 
