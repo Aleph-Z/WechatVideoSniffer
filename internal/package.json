@@ -19,6 +19,7 @@
     "koa": "^2.14.2",
     "koa-body": "^6.0.1",
     "mkdirp": "^3.0.1",
-    "nodejs-file-downloader": "^4.12.1"
+    "nodejs-file-downloader": "^4.12.1",
+    "yauzl": "^2.10.0"
   }
 }

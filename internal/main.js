@@ -12,6 +12,7 @@ import { fileURLToPath } from 'url'
 import { koaBody } from 'koa-body'
 import { mkdirpSync } from 'mkdirp'
 import downloader from 'nodejs-file-downloader'
+import yauzl from 'yauzl'
 
 const app = new Koa()
 const router = new Router()
@@ -66,15 +67,58 @@ class Aria2Evil {
 
   #urlCache = new Set
 
+  #aria2Bin = "aria2c.exe"
+  #aria2Webui = 'aria2_page.cc'
+
+  get currentWebUIFile() {
+    return path.join(__dirname, this.#aria2Webui)
+  }
+
+  #webuiCacheData = ""
+
+  async getWebuiData() {
+    if (this.#webuiCacheData) return this.#webuiCacheData
+    // copy by ChatGPT
+    const data = await new Promise((resolve, reject)=> {
+      yauzl.open(this.currentWebUIFile, {lazyEntries: true}, (_, zipFile)=> {
+        zipFile.readEntry()
+        zipFile.on('entry', entry=> {
+          if (entry.fileName === 'index.html') {
+            zipFile.openReadStream(entry, (err, readStream) => {
+              if (err) {
+                reject(err);
+                return;
+              }
+              let chunks = [];
+              readStream.on('data', (chunk) => {
+                chunks.push(chunk);
+              });
+              readStream.on('end', () => {
+                let buffer = Buffer.concat(chunks);
+                let content = buffer.toString();
+                resolve(content);
+              });
+            });
+          } else {
+            zipFile.readEntry();
+          }
+        })
+      })
+    })
+    this.#webuiCacheData = data
+    return data
+  }
+
   async init() {
     const isNext = await this.check()
     if (!isNext) {
+      console.log('windows系统自动下载aria2.exe')
       if (isWin) {
-        console.log('windows系统自动下载aria2.exe')
         await this.downloadBin()
-      } else {
-        console.log('其他系统不支持')
-        process.exit(1)
+      }
+      if (!fs.existsSync(this.currentWebUIFile)) {
+        console.log('webui配置文件不存在自动下载')
+        await this.downloadWebUI()
       }
     }
     console.log('aria2-server 启动成功')
@@ -87,12 +131,22 @@ class Aria2Evil {
   async downloadBin() {
     // https://github.com/agalwood/Motrix/blob/7012040fec926e16fe8f6c403cf038527f5c18b9/extra/win32/x64/engine/aria2c.exe
     const url = "https://ghproxy.com/https://github.com/agalwood/Motrix/raw/7012040fec926e16fe8f6c403cf038527f5c18b9/extra/win32/x64/engine/aria2c.exe"
-    const down = new downloader({
-      fileName: 'aria2c.exe',
+    const binPipe = new downloader({
+      fileName: this.#aria2Bin,
       url,
       directory: path.normalize(__dirname),
     })
-    await down.download()
+    await binPipe.download()
+  }
+
+  async downloadWebUI() {
+    const webui = "https://ghproxy.com/https://github.com/mayswind/AriaNg/releases/download/1.3.6/AriaNg-1.3.6-AllInOne.zip"
+    const webuiPipe = new downloader({
+      fileName: this.#aria2Webui,
+      url: webui,
+      directory: path.normalize(__dirname),
+    })
+    await webuiPipe.download()
   }
 
   get execName() {
@@ -158,6 +212,12 @@ class Aria2Evil {
 }
 
 const evil = new Aria2Evil()
+
+router.get('/', async ctx=> {
+  ctx.type = 'html'
+  const data = await evil.getWebuiData()
+  ctx.body = data
+})
 
 router.get('/ping', _=> {
   const msg = 'pong! current time is: {}'.format((new Date).toString())
