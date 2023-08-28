@@ -193,7 +193,7 @@ class Aria2Evil {
   download(url) {
     console.log('download task add url is {}'.format(url))
     const id = this.#getID(url)
-    if (this.#urlCache.has(id) || this.#urlCache.has(id)) {
+    if (this.#urlCache.has(url) || this.#urlCache.has(id)) {
       console.log("current task has exist")
       return
     }
