@@ -115,8 +115,14 @@ class Aria2Evil {
     console.log(stdout)
   }
 
+  /**
+   * @param {string} raw 
+   * @returns {string}
+   */
   #getID(raw) {
     // TODO: impl this 
+    const [ , id ] = raw.match(/trtc.*\/(.*)\.flv/) || []
+    return id
   }
 
   /**
@@ -125,12 +131,14 @@ class Aria2Evil {
    */
   download(url) {
     console.log('download task add url is {}'.format(url))
-    if (this.#urlCache.has(url)) {
+    const id = this.#getID(url)
+    if (this.#urlCache.has(id) || this.#urlCache.has(id)) {
       console.log("current task has exist")
       return
     }
     console.log('download task start {}'.format(url))
     this.#urlCache.add(url)
+    if (!!id) this.#urlCache.add(id)
     this.#ctx.call('addUri', [url], {
       dir: wxDownloadDir,
     })
