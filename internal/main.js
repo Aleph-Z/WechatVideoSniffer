@@ -116,10 +116,10 @@ class Aria2Evil {
       if (isWin) {
         await this.downloadBin()
       }
-      if (!fs.existsSync(this.currentWebUIFile)) {
-        console.log('webui配置文件不存在自动下载')
-        await this.downloadWebUI()
-      }
+    }
+    if (!fs.existsSync(this.currentWebUIFile)) {
+      console.log('webui配置文件不存在自动下载')
+      await this.downloadWebUI()
     }
     console.log('aria2-server 启动成功')
     this.start()
