@@ -133,6 +133,10 @@ class FLVSync {
   // Windows 环境变量设置: setx NODE_SYNC D:\Downloads
   initAsEnv() {
     const _target = process.env[this.#envKey] || ""
+    if (!_target) {
+      console.log("需要设置环境变量: NODE_SYNC")
+      process.exit(1)
+    }
     this.#target = _target
   }
 
