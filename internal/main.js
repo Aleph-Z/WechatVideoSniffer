@@ -123,8 +123,16 @@ class Aria2Evil {
     }
     console.log('aria2-server 启动成功')
     this.start()
-    setTimeout(()=> {
+    setTimeout(async ()=> {
       this.#ctx = new aria2()
+      await this.#ctx.open()
+      this.#ctx.on('onDownloadComplete', par=> {
+        // TODO: impl this
+        console.log("文件下载完成", par) 
+      }).on('onDownloadError', par=> {
+        // TODO: impl this
+        console.log('文件下载失败', par)
+      })
     }, 1200)
   }
 
@@ -174,7 +182,6 @@ class Aria2Evil {
    * @returns {string}
    */
   #getID(raw) {
-    // TODO: impl this 
     const [ , id ] = raw.match(/trtc.*\/(.*)\.flv/) || []
     return id
   }
