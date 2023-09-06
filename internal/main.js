@@ -24,6 +24,26 @@ const kAria2MaxDownloadOption = 20
 
 const isWin = os.platform == 'win32'
 
+// https://stackoverflow.com/a/19448657
+Date.prototype.YYYYMMDDHHMMSS = function () {
+  var yyyy = this.getFullYear().toString();
+  var MM = pad(this.getMonth() + 1,2);
+  var dd = pad(this.getDate(), 2);
+  var hh = pad(this.getHours(), 2);
+  var mm = pad(this.getMinutes(), 2)
+  var ss = pad(this.getSeconds(), 2)
+
+  return yyyy + MM + dd+  hh + mm + ss;
+}
+
+function pad(number, length) {
+  var str = '' + number;
+  while (str.length < length) {
+      str = '0' + str;
+  }
+  return str;
+}
+
 // copy by ChatGPT
 function getDownloadDir() {
   const homedir = os.homedir()
@@ -144,9 +164,9 @@ class FLVSync {
     this.#target = _target
   }
 
-  exec(filename) {
+  exec(filename, outputFilename) {
     const old = path.join(wxDownloadDir, filename)
-    const output = path.join(this.#target, filename)
+    const output = path.join(this.#target, outputFilename)
     const size = fs.statSync(old).size
     const humanSize=  formatBytes(size)
     const msg = '{} 准备同步到 {} 文件大小为 {}'.format(filename, this.#target, humanSize)
@@ -154,6 +174,58 @@ class FLVSync {
     fs.copyFileSync(old, output)
     const taskDoneMsg = '{} 同步结束({})'.format(filename, output)
     console.log(taskDoneMsg)
+  }
+
+}
+
+const Aria2RecordStatus = {
+  Unknow: 0,
+  Start: 1,
+  End: 2,
+}
+
+class Aria2Record {
+
+  #status = Aria2RecordStatus.Unknow
+  #stashTime
+  #flvUrl
+
+  constructor(flvUrl) {
+    this.#flvUrl = flvUrl
+    this.#status = Aria2RecordStatus.Start
+    this.#stashTime = new Date()
+  }
+
+  changeRecordToDone() {
+    this.changeRecordStatus(Aria2RecordStatus.End)
+  }
+
+  changeRecordToStart() {
+    this.changeRecordStatus(Aria2RecordStatus.Start)
+  }
+
+  get flv() {
+    return this.#flvUrl
+  }
+
+  get statusToString() {
+    switch (this.#status) {
+      case Aria2RecordStatus.Start:
+        return "录制中"
+      case Aria2RecordStatus.End:
+        return "录制结束"
+      default:
+        return "未知状态"
+    }
+  }
+
+  get isOver() {
+    return this.#status == Aria2RecordStatus.End
+  }
+
+  get fileName() {
+    const time = this.#stashTime.YYYYMMDDHHMMSS()
+    return `${this.statusToString}-${time}.flv`
   }
 
 }
@@ -171,7 +243,9 @@ class Aria2Evil {
   #aria2Bin = "aria2c.exe"
   #aria2Webui = 'aria2_page.cc'
 
-  flvSync = new FLVSync
+  flvSync = new FLVSync()
+
+  tasks = new Map()
 
   get currentWebUIFile() {
     return path.join(__dirname, this.#aria2Webui)
@@ -232,7 +306,10 @@ class Aria2Evil {
       this.#ctx.on('onDownloadComplete', async par=> {
         console.log("文件下载完成", par) 
         const filename = await this.mustQueryTaskFilename(par)
-        this.flvSync.exec(filename)
+        const task = this.tasks.get(filename)
+        task.changeRecordToDone()
+        const outputFilename = task.fileName
+        this.flvSync.exec(filename, outputFilename)
       }).on('onDownloadError', async par=> {
         // FIXME: 或许 flv 这种推流格式会返回失败, 所以可能要跟上面逻辑一样为好.
         console.log('文件下载失败', par)
@@ -321,9 +398,13 @@ class Aria2Evil {
     }
     console.log('download task start {}'.format(url))
     this.#urlCache.add(url)
-    if (!!id) this.#urlCache.add(id)
+    if (!id) return /* 如果没有 id 就不执行后续的流程 */
+    this.#urlCache.add(id)
+    const aria2Record = new Aria2Record(url)
+    const filename = aria2Record.fileName
+    this.tasks.set(filename, aria2Record)
     this.#ctx.call('addUri', [url], {
-      // dir: wxDownloadDir,
+      "out": filename,
     })
   }
 
