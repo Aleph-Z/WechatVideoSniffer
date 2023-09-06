@@ -275,7 +275,7 @@ class Aria2Evil {
     console.log('start aria2 server', new Date)
     const exec = isWin ? this.execPath : this.execName
     console.log('current exec path is', exec)
-    const options = [ '--check-certificate=false', `--dir=${wxDownloadDir}`, '--enable-rpc', '--rpc-listen-all=true', '--rpc-allow-origin-all', ` --max-concurrent-downloads=${kAria2MaxDownloadOption}`]
+    const options = [ '--check-certificate=false', `--dir=${wxDownloadDir}`, '--enable-rpc', '--rpc-listen-all=true', '--rpc-allow-origin-all', `--max-concurrent-downloads=${kAria2MaxDownloadOption}`]
     const { stdout } = await execa(exec, options)
     console.log(stdout)
   }
