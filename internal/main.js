@@ -20,6 +20,8 @@ const router = new Router()
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
+const kAria2MaxDownloadOption = 20
+
 const isWin = os.platform == 'win32'
 
 // copy by ChatGPT
@@ -273,7 +275,8 @@ class Aria2Evil {
     console.log('start aria2 server', new Date)
     const exec = isWin ? this.execPath : this.execName
     console.log('current exec path is', exec)
-    const { stdout } = await execa(exec, [ '--check-certificate=false', `--dir=${wxDownloadDir}`, '--enable-rpc', '--rpc-listen-all=true', '--rpc-allow-origin-all'])
+    const options = [ '--check-certificate=false', `--dir=${wxDownloadDir}`, '--enable-rpc', '--rpc-listen-all=true', '--rpc-allow-origin-all', ` --max-concurrent-downloads=${kAria2MaxDownloadOption}`]
+    const { stdout } = await execa(exec, options)
     console.log(stdout)
   }
 
