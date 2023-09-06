@@ -59,7 +59,7 @@ function getDownloadDir() {
 }
 
 const downloadDir = getDownloadDir()
-const wxDownloadDir = path.join(downloadDir, 'wx')
+const wxDownloadDir = path.join("../download");
 
 function isCommandExists(command) {
   try {
@@ -487,6 +487,7 @@ function preRemoveOldRecord(dir, day = 3) {
 }
 
 ;(async ()=> {
+  console.log("尝试创建下载目录")
   mkdirpSync(wxDownloadDir)
   console.log("启动前开始执行定期删除任务")
   preRemoveOldRecord(wxDownloadDir)
