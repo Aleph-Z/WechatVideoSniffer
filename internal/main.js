@@ -137,7 +137,9 @@ class FLVSync {
     const _target = process.env[this.#envKey] || ""
     if (!_target) {
       console.log("需要设置环境变量: NODE_SYNC")
-      process.exit(1)
+      if (isWin) {
+        process.exit(1)
+      }
     }
     this.#target = _target
   }
