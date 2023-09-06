@@ -461,9 +461,35 @@ function serverCallback() {
   console.log(msg)
 }
 
+function preRemoveOldRecord(dir, day = 3) {
+  const currentTime = Date.now();
+  const files = fs.readdirSync(dir)
+  if (!files.length) {
+    console.log("无需检测, 下载目录为空")
+    return
+  } else {
+    console.log(`开始检测${files.length}个历史缓存文件`)
+  }
+  const patchTime = day * 24 * 60 * 60 * 1000
+  files.forEach(file=> {
+    const realFile = path.join(dir, file)
+    try {
+      const stat = fs.statSync(realFile)
+      const timeDiff = currentTime - stat.mtime.getTime()
+      if (timeDiff > patchTime) {
+        console.log("文件已超过{}天, 执行删除任务({})".format(day, realFile))
+        fs.unlinkSync(realFile)
+      }
+    } catch (error) {
+      console.log(`检测${stat}文件失败`)
+    }
+  })
+}
+
 ;(async ()=> {
   mkdirpSync(wxDownloadDir)
-  console.log('尝试创建下载目录($HOME/Downloads/wx)')
+  console.log("启动前开始执行定期删除任务")
+  preRemoveOldRecord(wxDownloadDir)
   await evil.init()
   app.listen(3000, serverCallback)
 })()
