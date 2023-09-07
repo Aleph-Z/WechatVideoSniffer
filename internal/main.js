@@ -104,30 +104,44 @@ function getExtension(filename) {
   return ext[ext.length - 1];
 }
 
-// TODO: 将 flv 转为 ffmpeg
 class Convert {
 
-  #ffmpeg = ""
   #outputDir = ""
+  #binRealName = "flvtrans.exe"
 
-  constructor(outputDir, bin) {
-    if (bin) {
-      this.#ffmpeg = bin
-    }
+  #url = "https://registry.npmmirror.com/-/binary/ffmpeg-static/b6.0/ffmpeg-win32-x64"
+
+  constructor(outputDir) {
     this.#outputDir = outputDir
   }
 
-  // TODO: 下载 ffmpeg 二进制
-  downloadBin() {
-
+  get realFFmpegBinPath() {
+    return path.join(__dirname, this.#binRealName)
   }
 
-  async exec(raw) {
+  async downloadBin() {
+    const download = new downloader({
+      fileName: "",
+      url: this.#url,
+      directory: path.normalize(__dirname)
+    })
+    await download.download() 
+  }
+
+  check() {
+    if (isWin) {
+      if (!fs.statSync(this.realFFmpegBinPath)) {
+        return false
+      }
+    }
+    return true
+  }
+
+  async exec(raw, output) {
     const filename = getFilename(raw)
-    const realFilename = getRealFilename(filename)
+    const realFilename = output ? output : getRealFilename(filename)
     const outputFilename = path.join(this.#outputDir, realFilename)
-    // TODO: 将 stdout 打印到 process.stdout
-    const data = await execa(this.#ffmpeg, [
+    const data = await execa(this.realFFmpegBinPath, [
       "-i",
       raw,
       outputFilename,
@@ -421,6 +435,7 @@ class Aria2Evil {
 
 }
 
+const cv = new Convert("./trans")
 const evil = new Aria2Evil()
 
 router.get('/', async ctx=> {
