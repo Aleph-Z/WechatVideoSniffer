@@ -16,9 +16,11 @@
     "cowsay": "^1.5.0",
     "detect-port": "^1.5.1",
     "execa": "^8.0.1",
+    "filenamify": "^6.0.0",
     "koa": "^2.14.2",
     "koa-body": "^6.0.1",
     "mkdirp": "^3.0.1",
+    "node-fetch": "^3.3.2",
     "nodejs-file-downloader": "^4.12.1",
     "yauzl": "^2.10.0"
   }

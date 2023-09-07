@@ -13,6 +13,7 @@ import { koaBody } from 'koa-body'
 import { mkdirpSync } from 'mkdirp'
 import downloader from 'nodejs-file-downloader'
 import yauzl from 'yauzl'
+import KShare from './kshare.js'
 
 const app = new Koa()
 const router = new Router()
@@ -448,6 +449,13 @@ class Aria2Evil {
 const cv = new Convert("./trans")
 const evil = new Aria2Evil()
 
+// TODO: impl this
+// const ks = new KShare(60 * 5)
+// ks.addListener((ctx)=> {
+//   const { flv, title } = ctx
+//   evil.download(flv)
+// })
+
 router.get('/', async ctx=> {
   ctx.type = 'html'
   const data = await evil.getWebuiData()
@@ -518,5 +526,6 @@ function preRemoveOldRecord(dir, day = 3) {
   preRemoveOldRecord(wxDownloadDir)
   await cv.init()
   await evil.init()
+  ks.loopDetect()
   app.listen(3000, serverCallback)
 })()
