@@ -224,6 +224,10 @@ class Aria2Record {
     this.changeRecordStatus(Aria2RecordStatus.Start)
   }
 
+  changeRecordStatus(newStatus) {
+    this.#status = newStatus
+  }
+
   get flv() {
     return this.#flvUrl
   }
