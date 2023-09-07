@@ -121,7 +121,7 @@ class Convert {
 
   async downloadBin() {
     const download = new downloader({
-      fileName: "",
+      fileName: this.#binRealName,
       url: this.#url,
       directory: path.normalize(__dirname)
     })
@@ -130,11 +130,17 @@ class Convert {
 
   check() {
     if (isWin) {
-      if (!fs.statSync(this.realFFmpegBinPath)) {
+      if (!fs.existsSync(this.realFFmpegBinPath)) {
         return false
       }
     }
     return true
+  }
+
+  async init() {
+    if (!this.check()) {
+      await this.downloadBin()
+    }
   }
 
   async exec(raw, output) {
@@ -506,6 +512,7 @@ function preRemoveOldRecord(dir, day = 3) {
   mkdirpSync(wxDownloadDir)
   console.log("启动前开始执行定期删除任务")
   preRemoveOldRecord(wxDownloadDir)
+  await cv.init()
   await evil.init()
   app.listen(3000, serverCallback)
 })()
