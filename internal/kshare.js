@@ -48,6 +48,7 @@ export default class KShareRecord {
    * @type {string[]}
    */
   #roomids = []
+  #ignoreIds = new Set()
   #loopTime
 
   /**
@@ -69,6 +70,14 @@ export default class KShareRecord {
     return this.#loopTime * 1e3
   }
 
+  setRoomIds(ids) {
+    this.#roomids = ids
+  }
+
+  addIgnoreRoom(id) {
+    this.#ignoreIds.add(id)
+  }
+
   addRoom(id) {
     this.#roomids.push(id)
   }
@@ -78,15 +87,17 @@ export default class KShareRecord {
   }
 
   async loopDetect() {
+    await delay(1000)
     while (true) {
       if (this.rePure) break
-      await delay(this.#waitLoopTime)
       await this.detect()
+      await delay(this.#waitLoopTime)
     }
   }
 
   async detect() {
-    const ids = this.#roomids
+    let ids = this.#roomids
+    ids = ids.filter((_id) => !this.#ignoreIds.has(_id))
     if (!ids.length) return
     for (const item of ids) {
       try {
@@ -94,7 +105,7 @@ export default class KShareRecord {
         const { realURL: flv, safeTitle: title, isLive } = data
         if (isLive) {
           this.#subs.forEach(fn=> {
-            fn({ flv, title })
+            fn({ id: item, flv, title })
           })
         } else {
           // NOOP :)  
@@ -105,5 +116,4 @@ export default class KShareRecord {
       }
     }
   }
-
 }
