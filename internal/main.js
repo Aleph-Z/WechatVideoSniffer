@@ -14,12 +14,14 @@ import { mkdirpSync } from 'mkdirp'
 import downloader from 'nodejs-file-downloader'
 import yauzl from 'yauzl'
 import KShare from './kshare.js'
+import { readFileLines, watchFile } from "./room.js"
 
 const app = new Koa()
 const router = new Router()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+const ROOM_FILE = path.resolve(__dirname, "../room.txt")
 
 const kAria2MaxDownloadOption = 20
 
@@ -210,11 +212,13 @@ class Aria2Record {
   #status = Aria2RecordStatus.Unknow
   #stashTime
   #flvUrl
+  #filename
 
-  constructor(flvUrl) {
+  constructor(flvUrl,filename) {
     this.#flvUrl = flvUrl
     this.#status = Aria2RecordStatus.Start
     this.#stashTime = new Date()
+    this.#filename = filename
   }
 
   changeRecordToDone() {
@@ -249,6 +253,9 @@ class Aria2Record {
   }
 
   get fileName() {
+    if (this.#filename) {
+      return `${this.statusToString}-${this.#filename}.flv`
+    }
     const time = this.#stashTime.YYYYMMDDHHMMSS()
     return `${this.statusToString}-${time}.flv`
   }
@@ -390,6 +397,9 @@ class Aria2Evil {
    */
   #getID(raw) {
     const [ , id ] = raw.match(/trtc.*\/(.*)\.flv/) || []
+    if (!id) {
+      return raw.match("[^/]+(?!.*/).flv")[0].replace(".flv", "")
+    }
     return id
   }
 
@@ -414,7 +424,7 @@ class Aria2Evil {
    * 
    * @param {string} url 
    */
-  download(url) {
+  download(url, dist_filename) {
     console.log('download task add url is {}'.format(url))
     const id = this.#getID(url)
     if (this.#urlCache.has(url) || this.#urlCache.has(id)) {
@@ -425,7 +435,7 @@ class Aria2Evil {
     this.#urlCache.add(url)
     if (!id) return /* 如果没有 id 就不执行后续的流程 */
     this.#urlCache.add(id)
-    const aria2Record = new Aria2Record(url)
+    const aria2Record = new Aria2Record(url, dist_filename)
     const filename = aria2Record.fileName
     this.tasks.set(filename, aria2Record)
     this.#ctx.call('addUri', [url], {
@@ -450,11 +460,7 @@ const cv = new Convert("./trans")
 const evil = new Aria2Evil()
 
 // TODO: impl this
-// const ks = new KShare(60 * 5)
-// ks.addListener((ctx)=> {
-//   const { flv, title } = ctx
-//   evil.download(flv)
-// })
+const ks = new KShare(60 * 5)
 
 router.get('/', async ctx=> {
   ctx.type = 'html'
@@ -526,6 +532,16 @@ function preRemoveOldRecord(dir, day = 3) {
   preRemoveOldRecord(wxDownloadDir)
   await cv.init()
   await evil.init()
+  watchFile(ROOM_FILE, (ids) => {
+    ks.setRoomIds(ids)
+  })
+  ks.setRoomIds(await readFileLines(ROOM_FILE))
+  ks.addListener((ctx) => {
+    const { id, flv, title } = ctx
+    // TODO: 下载完成之后还需要移除忽略列表,但是以后再说吧
+    ks.addIgnoreRoom(id)
+    evil.download(flv, title)
+  })
   ks.loopDetect()
   app.listen(3000, serverCallback)
 })()
