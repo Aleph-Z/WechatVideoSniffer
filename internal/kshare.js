@@ -1,10 +1,19 @@
 import fetch from 'node-fetch'
 import filenamify from 'filenamify'
 
+// 比较当前时间是否在 startTime 和 endTime 之间
+function isCurrentTimeInRange(startTime, endTime) {
+  const now = new Date()
+  const currentTime = now.getHours() + ":" + now.getMinutes()
+  return currentTime >= startTime && currentTime <= endTime
+}
+
 export async function fetchLiveRoomData(rid) {
   const resp = await fetch(`https://api.koushare.com/api/api-live/getLiveByRoomid?roomid=${rid}&allData=1`, {
     "headers": {
       "accept": "application/json, text/plain, */*",
+      "User-Agent":
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
       "accept-language": "zh-CN,zh;q=0.9",
       "sec-ch-ua": "\"Chromium\";v=\"116\", \"Not)A;Brand\";v=\"24\", \"Google Chrome\";v=\"116\"",
       "sec-ch-ua-mobile": "?0",
@@ -27,6 +36,9 @@ export async function fetchLiveRoomData(rid) {
    */
   const data = (await resp.json()).data
   const realURL = data.flvurl
+  if (!realURL){
+    console.error("获取直播错误",await resp.json())
+  }
   const safeTitle = toSafeStr(data.ltitle)
   const isLive = data.islive == 1
   return {
@@ -43,9 +55,8 @@ function toSafeStr(raw) {
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 export default class KShareRecord {
-
   /**
-   * @type {string[]}
+   * @type {{id:string,startTime:string,endTime:string}[]}
    */
   #roomids = []
   #ignoreIds = new Set()
@@ -74,6 +85,10 @@ export default class KShareRecord {
     this.#roomids = ids
   }
 
+  clearIgnoreRoom() {
+    this.#ignoreIds.clear()
+  }
+
   addIgnoreRoom(id) {
     this.#ignoreIds.add(id)
   }
@@ -97,7 +112,16 @@ export default class KShareRecord {
 
   async detect() {
     let ids = this.#roomids
-    ids = ids.filter((_id) => !this.#ignoreIds.has(_id))
+    // 筛选不需要监听的直播房间号
+    ids = ids.filter((room) => {
+      if (isCurrentTimeInRange(room.startTime, room.endTime)) {
+        if (!this.#ignoreIds.has(room.id)) {
+          return true
+        }
+        return false
+      }
+      return false
+    })
     if (!ids.length) return
     for (const item of ids) {
       try {
@@ -105,7 +129,7 @@ export default class KShareRecord {
         const { realURL: flv, safeTitle: title, isLive } = data
         if (isLive) {
           this.#subs.forEach(fn=> {
-            fn({ id: item, flv, title })
+            if (flv && title) fn({ id: room.id, flv, title })
           })
         } else {
           // NOOP :)  

@@ -336,6 +336,8 @@ class Aria2Evil {
       this.#ctx = new aria2()
       await this.#ctx.open()
       this.#ctx.on('onDownloadComplete', async par=> {
+        // 临时使用,防止ks的直播一直被忽略文件
+        ks.clearIgnoreRoom()
         console.log("文件下载完成", par) 
         const filename = await this.mustQueryTaskFilename(par)
         const task = this.tasks.get(filename)
