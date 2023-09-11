@@ -125,11 +125,11 @@ export default class KShareRecord {
     if (!ids.length) return
     for (const item of ids) {
       try {
-        const data = await fetchLiveRoomData(item)
+        const data = await fetchLiveRoomData(item.id)
         const { realURL: flv, safeTitle: title, isLive } = data
         if (isLive) {
           this.#subs.forEach(fn=> {
-            if (flv && title) fn({ id: room.id, flv, title })
+            if (flv && title) fn({ id: item.id, flv, title })
           })
         } else {
           // NOOP :)  

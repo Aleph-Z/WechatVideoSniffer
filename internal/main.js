@@ -233,6 +233,10 @@ class Aria2Record {
     this.#status = newStatus
   }
 
+  setFilename(filename){
+    this.#filename = filename
+  }
+
   get flv() {
     return this.#flvUrl
   }
@@ -253,10 +257,10 @@ class Aria2Record {
   }
 
   get fileName() {
-    if (this.#filename) {
-      return `${this.statusToString}-${this.#filename}.flv`
-    }
     const time = this.#stashTime.YYYYMMDDHHMMSS()
+    if (this.#filename) {
+      return `${this.statusToString}-${this.time}-${this.#filename}.flv`
+    }
     return `${this.statusToString}-${time}.flv`
   }
 
@@ -318,6 +322,18 @@ class Aria2Evil {
     return data
   }
 
+  async onDownloadComplete(par){
+    // 临时使用,防止ks的直播一直被忽略文件
+    ks.clearIgnoreRoom()
+    console.log("文件下载完成", par)
+    const filename = await this.mustQueryTaskFilename(par)
+    const task = this.tasks.get(par[0].gid)
+    task.setFilename(filename)
+    task.changeRecordToDone()
+    const outputFilename = task.fileName
+    this.flvSync.exec(filename, outputFilename)
+  }
+
   async init() {
     const isNext = await this.check()
     if (!isNext) {
@@ -336,14 +352,9 @@ class Aria2Evil {
       this.#ctx = new aria2()
       await this.#ctx.open()
       this.#ctx.on('onDownloadComplete', async par=> {
-        // 临时使用,防止ks的直播一直被忽略文件
-        ks.clearIgnoreRoom()
-        console.log("文件下载完成", par) 
-        const filename = await this.mustQueryTaskFilename(par)
-        const task = this.tasks.get(filename)
-        task.changeRecordToDone()
-        const outputFilename = task.fileName
-        this.flvSync.exec(filename, outputFilename)
+        this.onDownloadComplete(par)
+      }).on("onDownloadStop", async (par) => {
+        this.onDownloadComplete(par)
       }).on('onDownloadError', async par=> {
         // FIXME: 或许 flv 这种推流格式会返回失败, 所以可能要跟上面逻辑一样为好.
         console.log('文件下载失败', par)
@@ -426,7 +437,7 @@ class Aria2Evil {
    * 
    * @param {string} url 
    */
-  download(url, dist_filename) {
+  async download(url, dist_filename) {
     console.log('download task add url is {}'.format(url))
     const id = this.#getID(url)
     if (this.#urlCache.has(url) || this.#urlCache.has(id)) {
@@ -439,10 +450,10 @@ class Aria2Evil {
     this.#urlCache.add(id)
     const aria2Record = new Aria2Record(url, dist_filename)
     const filename = aria2Record.fileName
-    this.tasks.set(filename, aria2Record)
-    this.#ctx.call('addUri', [url], {
+    let gid = await this.#ctx.call('addUri', [url], {
       "out": filename,
     })
+    this.tasks.set(gid,aria2Record)
   }
 
   async check() {
