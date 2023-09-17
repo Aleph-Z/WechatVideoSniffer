@@ -18,14 +18,14 @@ import { readFileLines, watchFile } from "./room.js"
 
 const app = new Koa()
 const router = new Router()
+const isWin = os.platform == 'win32'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-const ROOM_FILE = path.resolve(__dirname, "../room.txt")
+const ROOM_FILE = isWin ? path.resolve("E:\\WPS\\WPS云盘\\cswjj\\room.txt") : path.resolve(__dirname, "../room.txt")
 
 const kAria2MaxDownloadOption = 20
 
-const isWin = os.platform == 'win32'
 
 // https://stackoverflow.com/a/19448657
 Date.prototype.YYYYMMDDHHMMSS = function () {
@@ -259,7 +259,7 @@ class Aria2Record {
   get fileName() {
     const time = this.#stashTime.YYYYMMDDHHMMSS()
     if (this.#filename) {
-      return `${this.statusToString}-${this.time}-${this.#filename}.flv`
+      return `${this.statusToString}-${time}-${this.#filename}.flv`
     }
     return `${this.statusToString}-${time}.flv`
   }
@@ -328,7 +328,6 @@ class Aria2Evil {
     console.log("文件下载完成", par)
     const filename = await this.mustQueryTaskFilename(par)
     const task = this.tasks.get(par[0].gid)
-    task.setFilename(filename)
     task.changeRecordToDone()
     const outputFilename = task.fileName
     this.flvSync.exec(filename, outputFilename)
@@ -473,7 +472,7 @@ const cv = new Convert("./trans")
 const evil = new Aria2Evil()
 
 // TODO: impl this
-const ks = new KShare(60 * 5)
+const ks = new KShare(60 * 2)
 
 router.get('/', async ctx=> {
   ctx.type = 'html'

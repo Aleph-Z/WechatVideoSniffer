@@ -1,10 +1,12 @@
 import fetch from 'node-fetch'
 import filenamify from 'filenamify'
+import dayjs from "dayjs"
+
 
 // 比较当前时间是否在 startTime 和 endTime 之间
 function isCurrentTimeInRange(startTime, endTime) {
-  const now = new Date()
-  const currentTime = now.getHours() + ":" + now.getMinutes()
+  const now = dayjs()
+  const currentTime = now.hour() + ":" + now.minute()
   return currentTime >= startTime && currentTime <= endTime
 }
 
@@ -112,21 +114,29 @@ export default class KShareRecord {
 
   async detect() {
     let ids = this.#roomids
+    const now = dayjs();
+    console.log(now.format('YYYY-MM-DD HH:mm:ss'));
+    console.info("未筛选前",ids)
     // 筛选不需要监听的直播房间号
     ids = ids.filter((room) => {
       if (isCurrentTimeInRange(room.startTime, room.endTime)) {
         if (!this.#ignoreIds.has(room.id)) {
           return true
         }
+        console.info(`${room.id} 可能被下载,已忽略`)
+        console.info(this.#ignoreIds)
         return false
       }
+      console.info(`${room.id} 不在时间段`)
       return false
     })
+    console.log("筛选后",{ids})
     if (!ids.length) return
     for (const item of ids) {
       try {
         const data = await fetchLiveRoomData(item.id)
         const { realURL: flv, safeTitle: title, isLive } = data
+        console.info("直播信息",{title,isLive})
         if (isLive) {
           this.#subs.forEach(fn=> {
             if (flv && title) fn({ id: item.id, flv, title })
