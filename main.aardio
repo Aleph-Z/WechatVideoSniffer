@@ -67,8 +67,7 @@ filterUrl = function(url){
 		if (isNext and i1 and i2) {
 			if (!urls[url]) {
 				urls[url] = true
-				var s = "match result: " + url
-				console.log(s)
+	 		mainForm.listview.addItem( {url} )
 				http.post("http://127.0.0.1:3000/api", {
 					url = url
 				});
