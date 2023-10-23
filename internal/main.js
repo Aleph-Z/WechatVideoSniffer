@@ -24,7 +24,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const ROOM_FILE = isWin ? path.resolve("E:\\WPS\\WPS云盘\\cswjj\\room.txt") : path.resolve(__dirname, "../room.txt")
 
-const kAria2MaxDownloadOption = 20
+const kAria2MaxDownloadOption = 30
 
 
 // https://stackoverflow.com/a/19448657
