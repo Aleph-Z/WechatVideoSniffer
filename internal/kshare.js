@@ -5,8 +5,7 @@ import dayjs from "dayjs"
 
 // 比较当前时间是否在 startTime 和 endTime 之间
 function isCurrentTimeInRange(startTime, endTime) {
-  const now = dayjs()
-  const currentTime = now.hour() + ":" + now.minute()
+  const currentTime = dayjs().format("HH:mm")
   return currentTime >= startTime && currentTime <= endTime
 }
 
