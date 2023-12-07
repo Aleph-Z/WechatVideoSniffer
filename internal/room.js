@@ -1,4 +1,7 @@
 import fs from "fs"
+import iconv from "iconv-lite"
+import jschardet from "jschardet"
+
 let prevMtime
 
 function convertRoomData(data) {
@@ -15,16 +18,15 @@ function convertRoomData(data) {
 }
 
 export function readFileLines(path) {
-  return new Promise((resolve, reject) => {
-    fs.readFile(path, "utf8", (err, content) => {
-      if (err) {
-        console.error("Error reading file:", err)
-        reject(err)
-      }
-      const data = convertRoomData(content)
-      resolve(data)
-    })
-  })
+  fs.readFileSync(path)
+  // 解码
+  const buffer = fs.readFileSync(path)
+  const encode = jschardet.detect(buffer).encoding
+  let fileContent = iconv.decode(buffer, encode) // 转码后的文本内容
+  console.info("debug:", { fileContent })
+  const data = convertRoomData(fileContent)
+  console.info("debug:", { data })
+  return data
 }
 export function watchFile(path, callback) {
   // 监视文件的变化

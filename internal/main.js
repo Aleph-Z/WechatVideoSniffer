@@ -259,9 +259,9 @@ class Aria2Record {
   get fileName() {
     const time = this.#stashTime.YYYYMMDDHHMMSS()
     if (this.#filename) {
-      return `${this.statusToString}-${time}-${this.#filename}.flv`
+      return `${time}-${this.#filename}-${this.statusToString}.flv`
     }
-    return `${this.statusToString}-${time}.flv`
+    return `${time}-${this.statusToString}.flv`
   }
 
 }
