@@ -18,7 +18,6 @@ function convertRoomData(data) {
 }
 
 export function readFileLines(path) {
-  fs.readFileSync(path)
   // 解码
   const buffer = fs.readFileSync(path)
   const encode = jschardet.detect(buffer).encoding
