@@ -14,6 +14,7 @@ import { mkdirpSync } from 'mkdirp'
 import downloader from 'nodejs-file-downloader'
 import yauzl from 'yauzl'
 import KShare from './kshare.js'
+import Config from "./config.js"
 import { readFileLines, watchFile } from "./room.js"
 
 const app = new Koa()
@@ -22,9 +23,9 @@ const isWin = os.platform == 'win32'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
-const ROOM_FILE = isWin ? path.resolve("E:\\WPS\\WPS云盘\\cswjj\\room.txt") : path.resolve(__dirname, "../room.txt")
+const ROOM_FILE = isWin ? Config.roomPath : path.resolve(__dirname, "../room.txt")
 
-const kAria2MaxDownloadOption = 30
+const kAria2MaxDownloadOption = Config.downloadNum
 
 
 // https://stackoverflow.com/a/19448657
@@ -279,7 +280,7 @@ class Aria2Evil {
   #aria2Bin = "aria2c.exe"
   #aria2Webui = 'aria2_page.cc'
 
-  flvSync = new FLVSync()
+  flvSync = new FLVSync(Config.syncDestDir)
 
   tasks = new Map()
 
