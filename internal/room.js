@@ -9,9 +9,9 @@ function convertRoomData(data) {
 
   const roomData = lines.map((line) => {
     line = line.replace("\r", "")
-    const [id, timeRange] = line.split(",")
+    const [id, timeRange, token] = line.split(",")
     const [startTime, endTime] = timeRange.split("-")
-    return { id, startTime, endTime }
+    return { id, startTime, endTime, token }
   })
 
   return roomData

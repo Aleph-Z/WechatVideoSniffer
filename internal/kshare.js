@@ -1,7 +1,6 @@
-import fetch from 'node-fetch'
-import filenamify from 'filenamify'
+import fetch from "node-fetch"
+import filenamify from "filenamify"
 import dayjs from "dayjs"
-
 
 // 比较当前时间是否在 startTime 和 endTime 之间
 function isCurrentTimeInRange(startTime, endTime) {
@@ -9,39 +8,52 @@ function isCurrentTimeInRange(startTime, endTime) {
   return currentTime >= startTime && currentTime <= endTime
 }
 
-export async function fetchLiveRoomData(rid) {
-  const resp = await fetch(`https://api.koushare.com/api/api-live/getLiveByRoomid?roomid=${rid}&allData=1`, {
-    "headers": {
-      "accept": "application/json, text/plain, */*",
-      "User-Agent":
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
-      "accept-language": "zh-CN,zh;q=0.9",
-      "sec-ch-ua": "\"Chromium\";v=\"116\", \"Not)A;Brand\";v=\"24\", \"Google Chrome\";v=\"116\"",
-      "sec-ch-ua-mobile": "?0",
-      "sec-ch-ua-platform": "\"Windows\"",
-      "sec-fetch-dest": "empty",
-      "sec-fetch-mode": "cors",
-      "sec-fetch-site": "same-site",
-      // "cookie": "Hm_lvt_4bdc3f2e5c838455c9b8828a5b2913b7=1694091117; indexstc=hello; Hm_lpvt_4bdc3f2e5c838455c9b8828a5b2913b7=1694091307",
-      "Referer": "https://www.koushare.com/",
-      "Referrer-Policy": "origin"
-    },
-    "method": "GET"
-  })
+export async function fetchLiveRoomData(rid, token) {
+  let resp
+  try {
+    resp = await fetch(
+      `https://core.api.koushare.com/live/v1/live/getLive?liveId=${rid}&secret=${token}`,
+      {
+        headers: {
+          client: "front_web",
+          accept: "application/json, text/plain, */*",
+          "User-Agent":
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
+          "accept-language": "zh-CN,zh;q=0.9",
+          "sec-ch-ua":
+            '"Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"',
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": '"Windows"',
+          "sec-fetch-dest": "empty",
+          "sec-fetch-mode": "cors",
+          "sec-fetch-site": "same-site",
+          // "cookie": "Hm_lvt_4bdc3f2e5c838455c9b8828a5b2913b7=1694091117; indexstc=hello; Hm_lpvt_4bdc3f2e5c838455c9b8828a5b2913b7=1694091307",
+          "Referrer-Policy": "origin",
+        },
+        method: "GET",
+      },
+    )
+  } catch (error) {
+    return {
+      realURL: "",
+      safeTitle: "未获取成功",
+      isLive: false,
+    }
+  }
   /**
    * @type {{
    *  flvurl: string
-   *  ltitle: string
-   *  islive: boolean
+   *  title: string
+   *  liveStatus: int
    * }}
    */
   const data = (await resp.json()).data
   const realURL = data.flvurl
-  if (!realURL){
-    console.error("获取直播错误",await resp.json())
+  if (!realURL) {
+    console.error("获取直播错误", await resp.json())
   }
-  const safeTitle = toSafeStr(data.ltitle)
-  const isLive = data.islive == 1
+  const safeTitle = toSafeStr(data.title)
+  const isLive = data.liveStatus == 1
   return {
     realURL,
     safeTitle,
@@ -53,11 +65,11 @@ function toSafeStr(raw) {
   return filenamify(raw)
 }
 
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export default class KShareRecord {
   /**
-   * @type {{id:string,startTime:string,endTime:string}[]}
+   * @type {{id:string,startTime:string,endTime:string,token:string}[]}
    */
   #roomids = []
   #ignoreIds = new Set()
@@ -113,9 +125,9 @@ export default class KShareRecord {
 
   async detect() {
     let ids = this.#roomids
-    const now = dayjs();
-    console.log(now.format('YYYY-MM-DD HH:mm:ss'));
-    console.info("未筛选前",ids)
+    const now = dayjs()
+    console.log(now.format("YYYY-MM-DD HH:mm:ss"))
+    console.info("未筛选前", ids)
     // 筛选不需要监听的直播房间号
     ids = ids.filter((room) => {
       if (isCurrentTimeInRange(room.startTime, room.endTime)) {
@@ -129,23 +141,23 @@ export default class KShareRecord {
       console.info(`${room.id} 不在时间段`)
       return false
     })
-    console.log("筛选后",{ids})
+    console.log("筛选后", { ids })
     if (!ids.length) return
     for (const item of ids) {
       try {
-        const data = await fetchLiveRoomData(item.id)
+        const data = await fetchLiveRoomData(item.id, item.token)
         const { realURL: flv, safeTitle: title, isLive } = data
-        console.info("直播信息",{title,isLive})
+        console.info("直播信息", { title, isLive })
         if (isLive) {
-          this.#subs.forEach(fn=> {
+          this.#subs.forEach((fn) => {
             if (flv && title) fn({ id: item.id, flv, title })
           })
         } else {
-          // NOOP :)  
+          // NOOP :)
         }
       } catch (error) {
         console.log(error)
-        // NOOP :)  
+        // NOOP :)
       }
     }
   }
