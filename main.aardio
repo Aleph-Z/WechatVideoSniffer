@@ -51,7 +51,31 @@ var http = inet.http()
 
 // 视频链接过滤规则
 var urls = {}
+
+sendDownload = function(url){
+	if (!urls[url]) {
+	    urls[url] = true
+	    mainForm.listview.addItem( {url} )
+    try{
+            http.post("http://127.0.0.1:3000/api", {url = url});
+    }catch(e){
+
+    }
+  }
+}
+
+filterCanDownloadUrl = function(url){
+	var result = !!(string.startWith(url,"https://voipfindervod2.wxqcloud.qq.com") and string.find(url,".mp4"))
+	var result2 = !!(string.startWith(url,"https://pull-m1.wxlivecdn.com") and string.find(url,".flv"))
+	
+	return result or result2
+}
+
 filterUrl = function(url){
+	if (filterCanDownloadUrl(url)){
+		sendDownload(url)
+		return true
+	}
 	if(string.find(url,"^https\:\/\/finder<mp>*\.video\.qq\.com\/251\/20302\/") or string.find(url,"mpvideo\.qpic\.cn") ){
 	 	// 去除无用链接格式
 	 	if(!!string.match(url,"token=\w+")){
@@ -64,14 +88,9 @@ filterUrl = function(url){
 		var isNext = (string.find(url, "\.wxqcloud\.qq\.com") and string.find(url, "\.flv")) and string.find(url, "\/trtc_")
 		var i1 = !string.find(url, "\.smtcdns\.net")
 		var i2 = !string.find(url, "\.bytefcdnrd\.com\/trtc_")
-		if (isNext and i1 and i2) {
-			if (!urls[url]) {
-				urls[url] = true
-	 		mainForm.listview.addItem( {url} )
-				http.post("http://127.0.0.1:3000/api", {
-					url = url
-				});
-			}
+		
+		if (isNext2 or (isNext and i1 and i2)) {
+			sendDownload(url)
 		}
 	}
 	return false; 

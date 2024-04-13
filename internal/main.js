@@ -410,8 +410,16 @@ class Aria2Evil {
    */
   #getID(raw) {
     const [ , id ] = raw.match(/trtc.*\/(.*)\.flv/) || []
-    if (!id) {
-      return raw.match("[^/]+(?!.*/).flv")[0].replace(".flv", "")
+    try {
+      if (!id) {
+        const [filename] = raw.match("[^/]+(?!.*/).(mp4|flv)") || []
+        console.log(filename)
+        if (filename){
+          return filename
+        }
+      }
+    } catch (error) {
+      console.error(error)
     }
     return id
   }
@@ -440,6 +448,10 @@ class Aria2Evil {
   async download(url, dist_filename) {
     console.log('download task add url is {}'.format(url))
     const id = this.#getID(url)
+    if (!id){
+      console.log("not found filename")
+      return
+    }
     if (this.#urlCache.has(url) || this.#urlCache.has(id)) {
       console.log("current task has exist")
       return
