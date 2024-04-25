@@ -325,13 +325,17 @@ class Aria2Evil {
 
   async onDownloadComplete(par){
     // 临时使用,防止ks的直播一直被忽略文件
-    ks.clearIgnoreRoom()
-    console.log("文件下载完成", par)
-    const filename = await this.mustQueryTaskFilename(par)
-    const task = this.tasks.get(par[0].gid)
-    task.changeRecordToDone()
-    const outputFilename = task.fileName
-    this.flvSync.exec(filename, outputFilename)
+    try {
+      ks.clearIgnoreRoom()
+      console.log("文件下载完成", par)
+      const filename = await this.mustQueryTaskFilename(par)
+      const task = this.tasks.get(par[0].gid)
+      task.changeRecordToDone()
+      const outputFilename = task.fileName
+      this.flvSync.exec(filename, outputFilename)
+    } catch (error) {
+      console.error(error)
+    }
   }
 
   async init() {
@@ -409,6 +413,9 @@ class Aria2Evil {
    * @returns {string}
    */
   #getID(raw) {
+    if (raw.startsWith("https://finder.video.qq.com/251/20302/stodownload")){
+      return Date.now().toString()
+    }
     const [ , id ] = raw.match(/trtc.*\/(.*)\.flv/) || []
     try {
       if (!id) {
@@ -443,7 +450,7 @@ class Aria2Evil {
 
   /**
    * 
-   * @param {string} url 
+   * @param {string} url
    */
   async download(url, dist_filename) {
     console.log('download task add url is {}'.format(url))
@@ -497,6 +504,13 @@ router.get('/ping', _=> {
   const msg = 'pong! current time is: {}'.format((new Date).toString())
   console.log(msg)
   _.body = msg
+})
+
+router.post('/v2/download', ctx=> {
+  const { url,title } = ctx.request.body
+  console.log('/api request url is {}, start download'.format(url))
+  evil.download(url,title)
+  ctx.body = url
 })
 
 router.post('/api', ctx=> {
