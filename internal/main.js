@@ -532,7 +532,7 @@ app.use(router.routes())
 
 function serverCallback() {
   const msg = Cowsay.say({
-    text : "current server running is {}".format('http://localhost:3000'),
+    text : "current server running is {}".format('http://localhost:3527'),
     e : "oO",
     T : "U ",
   })
@@ -582,5 +582,5 @@ function preRemoveOldRecord(dir, day = 3) {
     evil.download(flv, title)
   })
   ks.loopDetect()
-  app.listen(3000, serverCallback)
+  app.listen(3527, serverCallback)
 })()
