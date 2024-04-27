@@ -459,10 +459,10 @@ class Aria2Evil {
       console.log("not found filename")
       return
     }
-    // if (this.#urlCache.has(url) || this.#urlCache.has(id)) {
-    //   console.log("current task has exist")
-    //   return
-    // }
+    if (this.#urlCache.has(url) || this.#urlCache.has(id)) {
+      console.log("current task has exist")
+      return
+    }
     console.log('download task start {}'.format(url))
     this.#urlCache.add(url)
     if (!id) return /* 如果没有 id 就不执行后续的流程 */
