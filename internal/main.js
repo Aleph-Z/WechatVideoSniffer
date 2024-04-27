@@ -459,10 +459,10 @@ class Aria2Evil {
       console.log("not found filename")
       return
     }
-    if (this.#urlCache.has(url) || this.#urlCache.has(id)) {
-      console.log("current task has exist")
-      return
-    }
+    // if (this.#urlCache.has(url) || this.#urlCache.has(id)) {
+    //   console.log("current task has exist")
+    //   return
+    // }
     console.log('download task start {}'.format(url))
     this.#urlCache.add(url)
     if (!id) return /* 如果没有 id 就不执行后续的流程 */
@@ -579,7 +579,7 @@ function preRemoveOldRecord(dir, day = 3) {
     const { id, flv, title } = ctx
     // TODO: 下载完成之后还需要移除忽略列表,但是以后再说吧
     ks.addIgnoreRoom(id)
-    evil.download(flv, title)
+    evil.download(flv, "kx_" + title)
   })
   ks.loopDetect()
   app.listen(3527, serverCallback)
